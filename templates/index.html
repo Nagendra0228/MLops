@@ -1,1 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Training Platform</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        header {
+            background-color: #6200ea;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        main {
+            padding: 2rem;
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        form {
+            margin-bottom: 2rem;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        input, button {
+            display: block;
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        button {
+            background-color: #6200ea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background-color: #3700b3;
+        }
+
+        pre {
+            background-color: #f8f8f8;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ML Training Platform</h1>
+    </header>
+    <main>
+        <form id="upload-form">
+            <label for="file">Upload Dataset (CSV):</label>
+            <input type="file" id="file" name="file" accept=".csv" required>
+            <button type="submit">Upload Dataset</button>
+        </form>
+
+        <form id="train-form">
+            <label for="target">Target Column:</label>
+            <input type="text" id="target" name="target" placeholder="Enter the target column name" required>
+            <button type="submit">Train Model</button>
+        </form>
+
+        <pre id="output"></pre>
+    </main>
+
+    <script>
+        let uploadedFilePath = '';  // Store uploaded file path
+
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('file');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    uploadedFilePath = result.file_path;  // Store the file path
+                    document.getElementById('output').textContent = `File uploaded successfully! File path: ${uploadedFilePath}`;
+                } else {
+                    document.getElementById('output').textContent = `Error: ${result.error}`;
+                }
+            } catch (error) {
+                document.getElementById('output').textContent = `Error: ${error.message}`;
+            }
+        });
+
+        document.getElementById('train-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const target = document.getElementById('target').value;
+
+            if (!uploadedFilePath) {
+                document.getElementById('output').textContent = "Error: Please upload a dataset first.";
+                return;
+            }
+
+            try {
+                const response = await fetch('/train', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        data_path: uploadedFilePath,  // Use the uploaded file path
+                        target_column: target 
+                    }),
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    let outputText = `Model trained successfully!\n\n`;
+
+                    // Loop through the results and display them
+                    for (const [modelName, metrics] of Object.entries(result.results)) {
+                        outputText += `${modelName}:\n`;
+                        outputText += `  Accuracy: ${metrics.accuracy}\n`;
+                        outputText += `  Precision: ${metrics.precision}\n`;
+                        outputText += `  Recall: ${metrics.recall}\n`;
+                        outputText += `  F1 Score: ${metrics.f1_score}\n\n`;
+                    }
+
+                    document.getElementById('output').textContent = outputText;
+                } else {
+                    document.getElementById('output').textContent = `Error: ${result.error}`;
+                }
+            } catch (error) {
+                document.getElementById('output').textContent = `Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>
 
